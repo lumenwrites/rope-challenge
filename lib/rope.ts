@@ -138,7 +138,93 @@ export function createRopeFromMap(map: MapRepresentation): IRope {
 // This is an internal API. You can implement it however you want. 
 // (E.g. you can choose to mutate the input rope or not)
 function splitAt(rope: IRope, position: number): { left: IRope, right: IRope } {
-  // TODO
+
+    const map = rope.toMap();
+    const list: MapRepresentation[] = [];
+
+    const left = createRopeFromMap(splitHelper(map, position, list));
+    const right = createRopeFromMap(concatenateMapList(list));
+
+    return {left, right};
+}
+
+function splitHelper(map: MapRepresentation, position: number, list: MapRepresentation[]): MapRepresentation {
+
+  if(map.kind === "leaf") {
+    const leftLeafNode: MapLeaf = {
+      text: map.text.substring(0, position + 1),
+      kind: "leaf"
+    }
+
+    const rightLeafNode: MapLeaf = {
+      text: map.text.substring(position+1),
+      kind: "leaf"
+    }
+
+    const mapBranchNode: MapBranch = {
+      left: leftLeafNode,
+      size: leftLeafNode.text.length,
+      kind: "branch"
+    }
+    list.push(rightLeafNode);
+
+    return mapBranchNode;
+
+  }
+
+  const leftSize = getSize(map.left);
+
+  if (leftSize === position + 1) {
+
+    list.push(map.right);
+    map.size = map.size - getSize(map.right);
+    map.right = undefined;
+    return map;
+  } else if (leftSize > position + 1) {
+
+    const leftSubtreeAns = splitHelper(map.left, position, list);
+    map.left = leftSubtreeAns;
+    list.push(map.right);
+    map.size = map.size - getSize(map.right);
+    map.right = undefined;
+    return map;
+  } else {
+    const rightSubtreeAns = splitHelper(map.right, position - getSize(map.left), list);
+    map.right = rightSubtreeAns;
+    map.size = getSize(map.right);
+    return map;
+  }
+}
+
+
+// Returns the size of the map
+function getSize(map: MapRepresentation): number {
+  if(map.kind === "leaf") return map.text.length;
+
+  return map.size;
+}
+
+function concatenateTwoMaps(map1: MapRepresentation, map2: MapRepresentation): MapRepresentation {
+  const newBranch: MapRepresentation = {
+    left: map1,
+    right: map2,
+    size: getSize(map1) + getSize(map2),
+    kind: "branch"
+  }
+
+  return newBranch;
+
+}
+
+function concatenateMapList(list: MapRepresentation[]): MapRepresentation {
+
+  let leftTree: MapRepresentation = list[0];
+  for(let i = 1; i < list.length; i++) {
+      leftTree = concatenateTwoMaps(leftTree, list[i]);
+  }
+
+  return leftTree;
+
 }
 
 export function deleteRange(rope: IRope, start: number, end: number): IRope {
@@ -146,7 +232,20 @@ export function deleteRange(rope: IRope, start: number, end: number): IRope {
 }
 
 export function insert(rope: IRope, text: string, location: number): IRope {
-  // TODO
+
+  const textRope = new RopeLeaf(text);
+
+  if(location === 0) {
+    return createRopeFromMap(concatenateTwoMaps(textRope.toMap(), rope.toMap()));
+  }
+
+  const {left, right} = splitAt(rope, location - 1);
+
+  const list = [left.toMap(), textRope.toMap(), right.toMap()];
+  const constructedMap = concatenateMapList(list);
+
+  return createRopeFromMap(constructedMap);
+
 }
 
 export function rebalance(rope: IRope): IRope {
