@@ -1,19 +1,15 @@
-/*
-  Note: this file is in typescript, but you do not need to use typings if you don't want.
-
-  The type annotations are just there in case they are helpful.
-*/
-
 type MapBranch = {
   left?: MapRepresentation,
   right?: MapRepresentation,
   size: number,
   kind: 'branch'
 }
+
 type MapLeaf = {
   text: string,
   kind: 'leaf'
 }
+
 type MapRepresentation = MapBranch | MapLeaf
 
 interface IRope {
@@ -27,12 +23,10 @@ interface IRope {
 export class RopeLeaf implements IRope {
   text: string;
 
-  // Note: depending on your implementation, you may want to to change this constructor
   constructor(text: string) {
     this.text = text;
   }
 
-  // just prints the stored text
   toString(): string {
     return this.text
   }
@@ -65,21 +59,17 @@ export class RopeBranch implements IRope {
   constructor(left: IRope, right: IRope) {
     this.left = left;
     this.right = right;
-    // Please note that this is defined differently from "weight" in the Wikipedia article.
-    // You may wish to rewrite this property or create a different one.
-    this.cachedSize = (left ? left.size() : 0) +
-      (right ? right.size() : 0)
+    // Unlike in wikipedia article, this contains the size of the whole tree, not just the left branch
+    this.cachedSize = (left ? left.size() : 0) + (right ? right.size() : 0)
+  }
+
+  size() {
+    return this.cachedSize;
   }
 
   // how deep the tree is (I.e. the maximum depth of children)
   height(): number {
     return 1 + Math.max(this.leftHeight(), this.rightHeight())
-  }
-  
-  // Please note that this is defined differently from "weight" in the Wikipedia article.
-  // You may wish to rewrite this method or create a different one.
-  size() {
-    return this.cachedSize;
   }
 
   /*
@@ -105,7 +95,6 @@ export class RopeBranch implements IRope {
   }
 
   // Helper method which converts the rope into an associative array
-  // 
   // Only used for debugging, this has no functional purpose
   toMap(): MapBranch {
     const mapVersion: MapBranch = {
@@ -116,13 +105,11 @@ export class RopeBranch implements IRope {
     if (this.left) mapVersion.left = this.left.toMap()
     return mapVersion
   }
-
+  // Convert the whole tree to a plain string
   toString(): string {
-    return (this.left ? this.left.toString() : '')
-      + (this.right ? this.right.toString() : '')
+    return (this.left ? this.left.toString() : '') + (this.right ? this.right.toString() : '')
   }
 }
-
 
 export function createRopeFromMap(map: MapRepresentation): IRope {
   if (map.kind == 'leaf') {
@@ -135,10 +122,8 @@ export function createRopeFromMap(map: MapRepresentation): IRope {
   return new RopeBranch(left, right);
 }
 
-// This is an internal API. You can implement it however you want. 
-// (E.g. you can choose to mutate the input rope or not)
+// Split the rope at a position
 function splitAt(rope: IRope, position: number): { left: IRope, right: IRope } {
-
     const map = rope.toMap();
     const list: MapRepresentation[] = [];
 
@@ -149,7 +134,6 @@ function splitAt(rope: IRope, position: number): { left: IRope, right: IRope } {
 }
 
 function splitHelper(map: MapRepresentation, position: number, list: MapRepresentation[]): MapRepresentation {
-
   if(map.kind === "leaf") {
     const leftLeafNode: MapLeaf = {
       text: map.text.substring(0, position + 1),
@@ -185,7 +169,7 @@ function splitHelper(map: MapRepresentation, position: number, list: MapRepresen
     const leftSubtreeAns = splitHelper(map.left, position, list);
     map.left = leftSubtreeAns;
     list.push(map.right);
-    map.size = map.size - getSize(map.right);
+    map.size = getSize(map.left);
     map.right = undefined;
     return map;
   } else {
@@ -195,7 +179,6 @@ function splitHelper(map: MapRepresentation, position: number, list: MapRepresen
     return map;
   }
 }
-
 
 // Returns the size of the map
 function getSize(map: MapRepresentation): number {
@@ -217,22 +200,15 @@ function concatenateTwoMaps(map1: MapRepresentation, map2: MapRepresentation): M
 }
 
 function concatenateMapList(list: MapRepresentation[]): MapRepresentation {
-
   let leftTree: MapRepresentation = list[0];
   for(let i = 1; i < list.length; i++) {
       leftTree = concatenateTwoMaps(leftTree, list[i]);
   }
 
   return leftTree;
-
-}
-
-export function deleteRange(rope: IRope, start: number, end: number): IRope {
-  // TODO
 }
 
 export function insert(rope: IRope, text: string, location: number): IRope {
-
   const textRope = new RopeLeaf(text);
 
   if(location === 0) {
@@ -246,6 +222,10 @@ export function insert(rope: IRope, text: string, location: number): IRope {
 
   return createRopeFromMap(constructedMap);
 
+}
+
+export function deleteRange(rope: IRope, start: number, end: number): IRope {
+  // TODO
 }
 
 export function rebalance(rope: IRope): IRope {
