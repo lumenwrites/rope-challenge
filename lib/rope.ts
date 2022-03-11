@@ -124,48 +124,47 @@ export function createRopeFromMap(map: MapRepresentation): IRope {
 
 // Split the rope at a position
 function splitAt(rope: IRope, position: number): { left: IRope, right: IRope } {
-    const map = rope.toMap();
-    const list: MapRepresentation[] = [];
+  const map = rope.toMap();
+  // List of the detached right sides of the map
+  const list: MapRepresentation[] = [];
+  // splitHelper returns just the left sides, mutates the list to collect all the detached sides
+  const left = createRopeFromMap(splitHelper(map, position, list));
+  const right = createRopeFromMap(concatenateMapList(list));
 
-    const left = createRopeFromMap(splitHelper(map, position, list));
-    const right = createRopeFromMap(concatenateMapList(list));
-
-    return {left, right};
+  return { left, right };
 }
 
 function splitHelper(map: MapRepresentation, position: number, list: MapRepresentation[]): MapRepresentation {
-  if(map.kind === "leaf") {
+  if (map.kind === "leaf") {
+    // If it's a leaf, we simply split it's text into two nodes, to the left and to the right of the position
     const leftLeafNode: MapLeaf = {
       text: map.text.substring(0, position + 1),
       kind: "leaf"
     }
 
     const rightLeafNode: MapLeaf = {
-      text: map.text.substring(position+1),
+      text: map.text.substring(position + 1),
       kind: "leaf"
     }
-
-    const mapBranchNode: MapBranch = {
-      left: leftLeafNode,
-      size: leftLeafNode.text.length,
-      kind: "branch"
-    }
+    // Split helper returns the left side, adds the right side to the list
     list.push(rightLeafNode);
 
-    return mapBranchNode;
-
+    return leftLeafNode;
   }
 
+
   const leftSize = getSize(map.left);
-
   if (leftSize === position + 1) {
-
+    // Base case. If the left and the right sides are already split at the position we want,
+    // Simply detach the right side (push it to the list and remove it).
     list.push(map.right);
     map.size = map.size - getSize(map.right);
     map.right = undefined;
     return map;
-  } else if (leftSize > position + 1) {
-
+  }
+  if (leftSize > position + 1) {
+    // If the position we're splitting on is somewhere in the left branch,
+    // we recursively use this function, let it figure out how to split the left branch
     const leftSubtreeAns = splitHelper(map.left, position, list);
     map.left = leftSubtreeAns;
     list.push(map.right);
@@ -173,6 +172,8 @@ function splitHelper(map: MapRepresentation, position: number, list: MapRepresen
     map.right = undefined;
     return map;
   } else {
+    // If the split position is to the right - we recursively split the right side.
+    // (now we need the position to be defined relative to the right side of the tree, hence -getSize(map.left))
     const rightSubtreeAns = splitHelper(map.right, position - getSize(map.left), list);
     map.right = rightSubtreeAns;
     map.size = getSize(map.right);
@@ -182,8 +183,7 @@ function splitHelper(map: MapRepresentation, position: number, list: MapRepresen
 
 // Returns the size of the map
 function getSize(map: MapRepresentation): number {
-  if(map.kind === "leaf") return map.text.length;
-
+  if (map.kind === "leaf") return map.text.length;
   return map.size;
 }
 
@@ -201,8 +201,8 @@ function concatenateTwoMaps(map1: MapRepresentation, map2: MapRepresentation): M
 
 function concatenateMapList(list: MapRepresentation[]): MapRepresentation {
   let leftTree: MapRepresentation = list[0];
-  for(let i = 1; i < list.length; i++) {
-      leftTree = concatenateTwoMaps(leftTree, list[i]);
+  for (let i = 1; i < list.length; i++) {
+    leftTree = concatenateTwoMaps(leftTree, list[i]);
   }
 
   return leftTree;
@@ -211,11 +211,11 @@ function concatenateMapList(list: MapRepresentation[]): MapRepresentation {
 export function insert(rope: IRope, text: string, location: number): IRope {
   const textRope = new RopeLeaf(text);
 
-  if(location === 0) {
+  if (location === 0) {
     return createRopeFromMap(concatenateTwoMaps(textRope.toMap(), rope.toMap()));
   }
 
-  const {left, right} = splitAt(rope, location - 1);
+  const { left, right } = splitAt(rope, location - 1);
 
   const list = [left.toMap(), textRope.toMap(), right.toMap()];
   const constructedMap = concatenateMapList(list);
@@ -225,7 +225,13 @@ export function insert(rope: IRope, text: string, location: number): IRope {
 }
 
 export function deleteRange(rope: IRope, start: number, end: number): IRope {
-  // TODO
+  // Split rope at start, then split the right side at end
+  const { left: leftStartSplit, right: rightStartSplit } = splitAt(rope, start - 1);
+  const { left: leftEndSplit, right: rightEndSplit } = splitAt(rightStartSplit, end - getSize(leftStartSplit.toMap()) - 1);
+  // Combine the two outer parts (leftEndSplit is the part I want to delete)
+  const list = [leftStartSplit.toMap(), rightEndSplit.toMap()];
+  const constructedMap = concatenateMapList(list);
+  return createRopeFromMap(constructedMap);
 }
 
 export function rebalance(rope: IRope): IRope {
