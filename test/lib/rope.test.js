@@ -54,7 +54,7 @@ describe("deletion", () => {
 });
 
 describe('Extra Credit: tree is rebalanced', () => {
-  const rebalancedRope = rebalance(createRopeFromMap({
+  expect(rebalance(createRopeFromMap({
     kind: 'branch',
     left: { kind: 'leaf', text: 'a' },
     right: {
@@ -66,9 +66,7 @@ describe('Extra Credit: tree is rebalanced', () => {
         right: { kind: 'leaf', text: 'd' }
       }
     },
-  }))
-  console.log(JSON.stringify(rebalancedRope.toMap(), null, 4))
-  const balancedRope = createRopeFromMap({
+  }))).toEqual(createRopeFromMap({
     kind: 'branch',
     left: {
       kind: 'branch',
@@ -80,7 +78,5 @@ describe('Extra Credit: tree is rebalanced', () => {
       left: { kind:'leaf',text: 'c' },
       right: { kind:'leaf',text: 'd' }
     },
-  })
-  console.log(balancedRope.toMap())
-  expect(rebalancedRope).toEqual(balancedRope)
+  }))
 })
