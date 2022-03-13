@@ -80,8 +80,7 @@ export class RopeBranch implements IRope {
     const leftBalanced = this.left ? this.left.isBalanced() : true
     const rightBalanced = this.right ? this.right.isBalanced() : true
 
-    return leftBalanced && rightBalanced
-      && Math.abs(this.leftHeight() - this.rightHeight()) < 2
+    return leftBalanced && rightBalanced && Math.abs(this.leftHeight() - this.rightHeight()) < 2
   }
 
   leftHeight(): number {
@@ -196,7 +195,6 @@ function concatenateTwoMaps(map1: MapRepresentation, map2: MapRepresentation): M
   }
 
   return newBranch;
-
 }
 
 function concatenateMapList(list: MapRepresentation[]): MapRepresentation {
@@ -234,6 +232,46 @@ export function deleteRange(rope: IRope, start: number, end: number): IRope {
   return createRopeFromMap(constructedMap);
 }
 
+
 export function rebalance(rope: IRope): IRope {
-  // TODO
+  const map: MapRepresentation = rope.toMap();
+  const allLeaves = [];
+  // Make the list of all the leaves, in order, from left to right
+  collectLeaves(map, allLeaves);
+  // Build a balanced map out of these leaves
+  const balancedMap = buildMap(allLeaves, 0, allLeaves.length-1);
+
+  return createRopeFromMap(balancedMap);
+}
+
+function collectLeaves(map: MapRepresentation, list: MapRepresentation[]) {
+  // If it's a leaf, add it to the list
+  if (map.kind === "leaf") {
+    list.push(map);
+    return;
+  }
+  // If it's a subtree, recursively collect leaves from the left and right branches
+  collectLeaves(map.left, list);
+  collectLeaves(map.right, list);
+}
+
+function buildMap(list: MapRepresentation[], i: number, j:number) : MapRepresentation {
+  // i and j are the range of elements to build the map out of.
+  // base case for recursion, return the map for a single element
+  if (i === j) return list[i]; 
+
+  // Find the middle element to split the list of leaves into two halves
+  const breakpoint = i + Math.floor((j-i)/2);
+
+  // Build the left and right branches, out of the first and second half of the list
+  const left: MapRepresentation = buildMap(list, i, breakpoint);
+  const right: MapRepresentation = buildMap(list, breakpoint+1, j);
+
+  // Return the new subtree made out of left and right branches (now balanced)
+  return {
+    left,
+    right,
+    size: getSize(left) + getSize(right),
+    kind: "branch"
+  }
 }
